@@ -15,9 +15,9 @@
 ## 当前阶段
 
 ```text
-阶段：虚拟 IP 生产工作流
-状态：AutoDL 实例已检查，已复用现有 ComfyUI-6006，Flux 模型软链接已接入，smoke test 已通过
-日期：2026-05-08
+阶段：RVC 音频工作流
+状态：AutoDL 已创建 rvc 环境，RVC WebUI 6008 临时启动验证通过，等待上传 Hubert/RMVPE/音色模型
+日期：2026-05-09
 ```
 
 ## 进度总览
@@ -39,8 +39,14 @@
 | Nova Orange XL 调研 | 已完成 | 确认为 Illustrious Checkpoint Merge，不是 Flux |
 | Nova Orange XL 工作流骨架 | 已完成 | 已生成 `workflows/ip/nova_orange_xl_illustrious_text2image_ui_workflow.json` |
 | 大模型上传脚本 | 已完成 | 已生成 `scripts/upload_large_model_to_autodl.py`，支持 SFTP 断点续传 |
-| 角色候选图生成 | 待开始 | 建议第一轮 20-40 张 |
-| 角色首帧输出 | 待开始 | 输出 9:16 视频首帧 |
+| 角色候选图生成 | 已完成初版 | 用户已用 Nova Orange XL 得到满意候选图 |
+| 角色首帧输出 | 已完成初版 | 可作为后续视频首帧基准 |
+| RVC 音频环境 | 已完成 | AutoDL 已创建 `rvc` conda 环境并安装 RVC / Demucs / ffmpeg |
+| RVC 音频脚本 | 已完成 | 已生成 `scripts/audio/*.sh` |
+| RVC 音频工作流文档 | 已完成 | 已生成 `docs/rvc_audio_workflow_setup.md` |
+| RVC WebUI 启动验证 | 已完成 | 临时启动 6008 并确认 HTTP 200，测试后已停止 |
+| RVC 基础模型上传 | 待用户上传 | 需要 `hubert_base.pt`、`rmvpe.pt`、RVC `.pth/.index` |
+| 首个歌曲片段转换 | 待开始 | 上传音频和音色模型后执行 |
 
 ## 本次开发记录
 
@@ -75,6 +81,7 @@
 [x] 创建 Nova Orange XL / Illustrious 专用 ComfyUI 工作流骨架
 [x] 创建大模型上传到 AutoDL 的断点续传脚本和说明文档
 [x] 用户决定稍后自行上传 Nova Orange XL，已停止上传并清理远端 `.part/.scp.part` 半成品
+[x] 为 Luna v1 增加 Nova Orange XL 高机位舞台构图 prompt
 ```
 
 生成和更新文件：
@@ -121,6 +128,68 @@ remote_outputs/flux1_dev_smoke_00001_.png
 8. 记录 prompt、seed、模型、输出路径
 ```
 
+### 2026-05-09
+
+目标：
+
+```text
+搭建第二条 RVC 音频工作流，并整理成可复用脚本和文档。
+```
+
+完成：
+
+```text
+[x] 登录 AutoDL 并复查实例状态、磁盘空间、ComfyUI 6006 进程
+[x] 未修改 ComfyUI 启动脚本，未修改 AutoDL 端口映射
+[x] 创建 /root/autodl-tmp/vip_singing/audio_workflow
+[x] 克隆 RVC-Project/Retrieval-based-Voice-Conversion-WebUI
+[x] 创建 conda 环境 rvc，Python 3.10.20
+[x] 安装 torch 2.11.0+cu128，并确认 RTX 5090 CUDA 可用
+[x] 安装 RVC requirements，保留 pip 23.3.2 以兼容旧依赖
+[x] 安装 Demucs 4.0.1 和 ffmpeg
+[x] 修正 gradio 3.34.0 与 gradio_client 的兼容问题，固定 gradio_client 0.2.9
+[x] 创建 RVC WebUI 6008 启动脚本
+[x] 创建 RVC 音色模型软链接同步脚本
+[x] 创建 Demucs 人声/伴奏分离脚本
+[x] 创建 RVC 人声与伴奏混音脚本
+[x] 创建音频工作流 smoke check 脚本
+[x] 生成 RVC 音频工作流搭建文档
+[x] 临时启动 RVC WebUI 6008 并确认 HTTP 200，测试后已停止进程
+```
+
+生成和更新文件：
+
+```text
+docs/rvc_audio_workflow_setup.md
+scripts/audio/start_rvc_webui.sh
+scripts/audio/sync_rvc_model_assets.sh
+scripts/audio/separate_vocals_demucs.sh
+scripts/audio/mix_rvc_with_instrumental.sh
+scripts/audio/rvc_audio_smoke_check.sh
+DEVELOPMENT_PROGRESS.md
+```
+
+远端关键文件：
+
+```text
+/root/autodl-tmp/vip_singing/audio_workflow/tools/Retrieval-based-Voice-Conversion-WebUI
+/root/autodl-tmp/vip_singing/audio_workflow/scripts/start_rvc_webui.sh
+/root/autodl-tmp/vip_singing/audio_workflow/scripts/sync_rvc_model_assets.sh
+/root/autodl-tmp/vip_singing/audio_workflow/scripts/separate_vocals_demucs.sh
+/root/autodl-tmp/vip_singing/audio_workflow/scripts/mix_rvc_with_instrumental.sh
+/root/autodl-tmp/vip_singing/audio_workflow/scripts/rvc_audio_smoke_check.sh
+```
+
+下一步：
+
+```text
+1. 用户下载并上传 hubert_base.pt
+2. 用户下载并上传 rmvpe.pt
+3. 用户上传一个可测试的 RVC 音色模型 .pth 和 .index
+4. 执行 sync_rvc_model_assets.sh
+5. 启动 WebUI-6008，跑通首个 10-15 秒音频片段
+```
+
 ## 决策记录
 
 | 日期 | 决策 | 原因 |
@@ -135,6 +204,10 @@ remote_outputs/flux1_dev_smoke_00001_.png
 | 2026-05-08 | 工作流需注册到 ComfyUI 用户目录 | 前端“工作流”面板不会自动扫描项目目录 `/root/autodl-tmp/vip_singing/workflows` |
 | 2026-05-08 | Nova Orange XL 使用 Checkpoint 工作流 | 该模型是 Illustrious Checkpoint Merge，不适合放入 Flux 的 UNETLoader |
 | 2026-05-08 | 暂停本次本地到 AutoDL 的大模型上传 | 当前网络链路上传 6.46GB 文件过慢，用户决定回家后再上传 |
+| 2026-05-09 | RVC 使用独立 conda 环境 `rvc` | 避免污染 ComfyUI 自带 Python 环境 |
+| 2026-05-09 | RVC WebUI 预留使用 6008 | AutoDL 页面已有 WebUI-6008 入口，不改现有 6006 ComfyUI |
+| 2026-05-09 | 音频分离优先使用 Demucs | 比先折腾 UVR5 更适合作为 MVP 人声/伴奏分离起点 |
+| 2026-05-09 | 暂不训练自有 RVC 音色 | 先用现成模型跑通歌曲片段闭环，再替换成自训练音色 |
 
 ## 待确认事项
 
@@ -145,7 +218,11 @@ remote_outputs/flux1_dev_smoke_00001_.png
 [x] 首选 Flux 版本：FLUX.1-dev 作为 IP 质量路线，FLUX.2-klein-base-4B 作为轻量备选
 [x] 模型接入方式：AutoDL 公共模型盘软链接
 [ ] ComfyUI 进程当前仍可能保留 FLUX.1-dev 显存缓存，后续如需完全释放再手动重启 ComfyUI
-[ ] 第一轮虚拟 IP 角色设定
-[ ] 第一轮 20-40 张角色候选图
-[ ] 第一张 9:16 唱歌视频首帧
+[x] 第一轮虚拟 IP 角色设定
+[x] 第一轮角色候选图已得到满意候选
+[x] 第一张 9:16 唱歌视频首帧已有初版基准
+[ ] 上传 RVC `hubert_base.pt`
+[ ] 上传 RVC `rmvpe.pt`
+[ ] 上传一个 RVC 音色模型 `.pth/.index`
+[ ] 跑通第一段 10-15 秒 RVC 音频转换
 ```

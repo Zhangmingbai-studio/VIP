@@ -95,3 +95,65 @@ seed：randomize
 [ ] 后续适合做轻微唱歌表情和 lip-sync
 ```
 
+## Nova Orange XL 构图调整 Prompt
+
+用于 Nova Orange XL / Illustrious 工作流。目标是保留当前喜欢的画风、光影、人物和服装质感，但把镜头从脸部特写拉远到舞台高机位构图，接近“舞台自拍 / 高角度俯拍 / 半身到全身”的感觉。
+
+### Positive Prompt：高机位舞台构图
+
+粘贴到 Nova Orange XL 工作流的正向 `CLIP文本编码`：
+
+```text
+masterpiece, best quality, amazing quality, 4k, very aesthetic, high resolution, ultra-detailed, absurdres, newest, 1girl, solo, original character, virtual singer, silver white long hair, pale blue eyes, delicate oval face, natural light makeup, black short stage jacket, dark inner top, silver in-ear monitors, small silver earrings, detailed glossy hair, detailed clothing texture, dramatic soft stage lighting, concert stage, stage spotlights, depth of field, volumetric lighting, high-angle shot, overhead camera angle, wide-angle perspective, selfie-like stage photo, looking up at viewer, upper body and waist visible, three-quarter body composition, stage floor visible, one hand holding a microphone above the camera, relaxed singing pose, gentle performance pose, calm smile, natural expression, clear visible mouth, elegant idol stage presence
+```
+
+### Negative Prompt：避免脸部大特写
+
+粘贴到负向 `CLIP文本编码`：
+
+```text
+extreme close-up, close-up face, face filling frame, only face, only head, cropped body, cropped shoulders, cropped mouth, cropped head, no body, portrait closeup, looking straight at camera in close-up, exaggerated action, overdramatic pose, open mouth too wide, screaming, crazy expression, multiple people, short hair, red eyes, childish face, overly young, hand covering face, hand near mouth, microphone covering mouth, distorted face, asymmetric eyes, deformed mouth, teeth artifacts, bad hands, extra fingers, missing fingers, heavy motion blur, crowded background, low quality, watermark, text, logo
+```
+
+### 参数建议
+
+```text
+model：novaOrangeXL_exV20.safetensors
+分辨率：832x1216
+steps：28
+cfg：4.0
+sampler：euler_ancestral
+scheduler：normal
+clip skip：2
+batch_size：1
+seed：randomize
+右上角运行数量：8
+```
+
+### 如果还太近
+
+在正向 prompt 里追加：
+
+```text
+full body visible, head-to-toe composition, more distance from camera, small face in frame, full outfit visible
+```
+
+在负向 prompt 里加强：
+
+```text
+close portrait, bust shot, face close-up, headshot
+```
+
+### 如果动作太夸张
+
+把正向 prompt 里的：
+
+```text
+one hand holding a microphone above the camera
+```
+
+替换为：
+
+```text
+holding a microphone naturally, relaxed arm pose, subtle stage gesture
+```
