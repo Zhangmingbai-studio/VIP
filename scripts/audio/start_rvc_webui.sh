@@ -5,6 +5,7 @@ PORT="${1:-6008}"
 WORKFLOW_ROOT="${WORKFLOW_ROOT:-/root/autodl-tmp/vip_singing/audio_workflow}"
 RVC_ROOT="${RVC_ROOT:-$WORKFLOW_ROOT/tools/Retrieval-based-Voice-Conversion-WebUI}"
 CONDA_ROOT="${CONDA_ROOT:-/root/miniconda3}"
+RVC_PYTHON="$CONDA_ROOT/envs/rvc/bin/python"
 
 export PATH="$CONDA_ROOT/bin:$PATH"
 
@@ -13,7 +14,7 @@ if [[ ! -d "$RVC_ROOT" ]]; then
   exit 1
 fi
 
-python - "$PORT" <<'PY'
+"$RVC_PYTHON" - "$PORT" <<'PY'
 import socket
 import sys
 
@@ -41,6 +42,8 @@ mkdir -p \
 # shellcheck source=/dev/null
 source "$CONDA_ROOT/etc/profile.d/conda.sh"
 conda activate rvc
+export PATH="$CONDA_PREFIX/bin:$PATH"
+export LD_LIBRARY_PATH="$CONDA_PREFIX/lib:${LD_LIBRARY_PATH:-}"
 
 cd "$RVC_ROOT"
-exec python infer-web.py --port "$PORT" --pycmd python --noautoopen
+exec "$RVC_PYTHON" infer-web.py --port "$PORT" --pycmd "$RVC_PYTHON" --noautoopen

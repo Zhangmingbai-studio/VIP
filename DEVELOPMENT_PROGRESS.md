@@ -42,12 +42,14 @@
 | 角色候选图生成 | 已完成初版 | 用户已用 Nova Orange XL 得到满意候选图 |
 | 角色首帧输出 | 已完成初版 | 可作为后续视频首帧基准 |
 | RVC 音频环境 | 已完成 | AutoDL 已创建 `rvc` conda 环境并安装 RVC / Demucs / ffmpeg |
-| RVC 音频脚本 | 已完成 | 已生成 `scripts/audio/*.sh` |
+| RVC 音频脚本 | 已完成 | 已生成 `scripts/audio/*.sh` 和歌曲片段裁剪工具 |
 | RVC 音频工作流文档 | 已完成 | 已生成 `docs/rvc_audio_workflow_setup.md` |
 | RVC WebUI 启动验证 | 已完成 | 临时启动 6008 并确认 HTTP 200，测试后已停止 |
 | RVC 基础模型上传 | 已完成 | `hubert_base.pt`、`rmvpe.pt` 已放入 RVC assets |
 | RVC 音色模型同步 | 已完成 | `misono-mika.pth/.index` 已软链接到 RVC assets |
-| 首个歌曲片段转换 | 待开始 | 上传音频和音色模型后执行 |
+| 首个歌曲片段分离 | 已完成 | Demucs 已输出 `vocals.wav` 和 `no_vocals.wav` |
+| 首个歌曲片段 RVC 转换 | 已完成 | 已从 Gradio 临时输出归档 RVC 人声 |
+| 第一版音频混音 | 已完成 | 已输出 16 秒 `final_mix.wav` |
 
 ## 本次开发记录
 
@@ -210,6 +212,20 @@ DEVELOPMENT_PROGRESS.md
 [x] 将 `misono-mika.index` 软链接到 `assets/indices/`
 [x] 运行 RVC smoke check：Hubert present，RMVPE present，voice pth count 1，voice index count 1
 [x] 重启 RVC WebUI-6008，确认 HTTP ready
+[x] 新增本地歌曲片段裁剪工具 `scripts/audio/prepare_song_clip.py`，可将完整歌曲转为 10-15 秒 WAV
+[x] 更新 `docs/rvc_audio_workflow_setup.md`，补充裁剪歌曲片段的使用方式
+[x] 远端修复当前 shell 的 TorchCodec 动态库加载：设置 `LD_LIBRARY_PATH=$CONDA_PREFIX/lib:$LD_LIBRARY_PATH`
+[x] Demucs 已成功分离 `045b_5553_0309_3129f6561cb9489b66e84c5eb53c3a4d_clip_27s_16s.wav`
+[x] 已生成 16 秒 `vocals.wav` 和 `no_vocals.wav`
+[x] 修正本地 `start_rvc_webui.sh`，强制使用 `/root/miniconda3/envs/rvc/bin/python`，避免误用 base Python
+[x] 远端已用 rvc 绝对 Python 路径启动 RVC WebUI-6008，HTTP 200
+[x] 远端修复 PyTorch 2.6+ `weights_only=True` 与 fairseq HuBERT 加载不兼容问题
+[x] 远端重启 RVC WebUI-6008，确认 HTTP 200
+[x] 用户通过 RVC WebUI 成功生成 misono-mika 转换后人声
+[x] 将 Gradio 临时音频归档为 `/root/autodl-tmp/vip_singing/audio_workflow/output/rvc_vocals/045b_clip_27s_16s_misono_mika_rvc.wav`
+[x] 已将 RVC 人声与 Demucs 伴奏混音为 `/root/autodl-tmp/vip_singing/audio_workflow/output/final_mix/045b_clip_27s_16s_misono_mika_final_mix.wav`
+[x] 确认 RVC 人声时长 15.98 秒，最终混音时长 16.00 秒
+[x] 新增并上传 `archive_latest_rvc_and_mix.sh`，用于自动归档最新 RVC WebUI 输出并混音
 ```
 
 当前 RVC WebUI：
@@ -224,10 +240,13 @@ DEVELOPMENT_PROGRESS.md
 
 ```text
 1. 打开 AutoDL WebUI-6008
-2. 上传或选择 10-15 秒歌曲片段
-3. 先用 Demucs 分离 vocals/no_vocals
-4. 在 RVC WebUI 中用 misono-mika 转换 vocals.wav
-5. 将转换后人声与 no_vocals.wav 混音
+2. 用 `scripts/audio/prepare_song_clip.py` 将完整歌曲裁成 10-15 秒 WAV
+3. 上传或选择 10-15 秒歌曲片段
+4. Demucs 已分离 vocals/no_vocals
+5. RVC WebUI 已完成 misono-mika 转换
+6. 已将转换后人声与 no_vocals.wav 混音
+7. 下载或试听 `final_mix.wav`，判断音色自然度和伴奏/人声音量比例
+8. 如果音频可接受，进入 LTX-2.3 视频工作流
 ```
 
 ## 决策记录
@@ -266,5 +285,9 @@ DEVELOPMENT_PROGRESS.md
 [x] 上传 RVC `rmvpe.pt`
 [x] 上传一个 RVC 音色模型 `.pth/.index`
 [x] RVC WebUI-6008 启动并可访问
-[ ] 跑通第一段 10-15 秒 RVC 音频转换
+[x] 跑通第一段歌曲片段 Demucs 人声/伴奏分离
+[x] 跑通第一段 RVC 音色转换
+[x] 输出第一版 RVC dry vocal 和 `final_mix.wav`
+[ ] 试听第一版 RVC 音频，决定是否调参重跑
+[ ] 进入 LTX-2.3 + lip-sync 视频工作流
 ```

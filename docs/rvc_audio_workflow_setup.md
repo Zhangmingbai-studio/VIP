@@ -113,13 +113,31 @@ bash /root/autodl-tmp/vip_singing/audio_workflow/scripts/start_rvc_webui.sh 6008
 
 ## MVP 使用流程
 
-1. 上传 10-15 秒原始歌曲片段到：
+1. 将下载好的完整歌曲裁成 10-15 秒 WAV 片段：
+
+```bash
+python3 scripts/audio/prepare_song_clip.py "/path/to/full_song.mp3" \
+  --start 01:12 \
+  --duration 12 \
+  --out "/path/to/song_clip_12s.wav"
+```
+
+说明：
+
+```text
+--start 支持秒数、MM:SS、HH:MM:SS
+--duration MVP 推荐 10-15 秒，默认 12 秒
+--out 可以是完整 wav 路径，也可以是目录；例如 `--out .` 表示输出到当前目录
+输出格式为 44.1kHz / pcm_s16le / wav
+```
+
+2. 上传 10-15 秒原始歌曲片段到：
 
 ```text
 /root/autodl-tmp/vip_singing/audio_workflow/input/song_clips/
 ```
 
-2. 用 Demucs 分离人声和伴奏：
+3. 用 Demucs 分离人声和伴奏：
 
 ```bash
 bash /root/autodl-tmp/vip_singing/audio_workflow/scripts/separate_vocals_demucs.sh \
@@ -133,7 +151,7 @@ bash /root/autodl-tmp/vip_singing/audio_workflow/scripts/separate_vocals_demucs.
 /root/autodl-tmp/vip_singing/audio_workflow/output/separated/htdemucs/demo/no_vocals.wav
 ```
 
-3. 打开 RVC WebUI，选择你的 `.pth` 模型和 `.index`，输入 `vocals.wav` 做转换。
+4. 打开 RVC WebUI，选择你的 `.pth` 模型和 `.index`，输入 `vocals.wav` 做转换。
 
 建议第一轮参数：
 
@@ -145,13 +163,32 @@ protect：0.33
 resample sr：0
 ```
 
-4. 将转换后的人声保存到：
+5. 将转换后的人声归档，并与伴奏重新混音。
+
+RVC WebUI 只负责音色转换，不负责把人声和伴奏混回一条歌。点击 Convert 后，输出音频通常先保存在服务器的 Gradio 临时目录，例如：
 
 ```text
-/root/autodl-tmp/vip_singing/audio_workflow/output/rvc_vocals/
+/tmp/gradio/<hash>/audio.wav
 ```
 
-5. 与伴奏重新混音：
+不需要先下载到本地再上传回服务器。推荐直接在服务器上执行一键归档和混音脚本：
+
+```bash
+bash /root/autodl-tmp/vip_singing/audio_workflow/scripts/archive_latest_rvc_and_mix.sh \
+  /root/autodl-tmp/vip_singing/audio_workflow/output/separated/htdemucs/demo/no_vocals.wav \
+  demo_misono_mika
+```
+
+它会自动：
+
+```text
+1. 找到 /tmp/gradio 里最新的 RVC WebUI 输出音频
+2. 复制到 output/rvc_vocals/<name>_rvc.wav
+3. 与 no_vocals.wav 混音
+4. 输出到 output/final_mix/<name>_final_mix.wav
+```
+
+如果你已经手动知道 RVC 人声路径，也可以直接调用底层混音脚本：
 
 ```bash
 bash /root/autodl-tmp/vip_singing/audio_workflow/scripts/mix_rvc_with_instrumental.sh \
@@ -167,6 +204,124 @@ bash /root/autodl-tmp/vip_singing/audio_workflow/scripts/rvc_audio_smoke_check.s
 ```
 
 目前没有上传 `hubert_base.pt`、`rmvpe.pt` 和具体音色模型前，验证脚本会显示这些模型 missing，这是预期状态。Python 包、CUDA、Demucs、ffmpeg 正常即可。
+
+## 常见问题
+
+### Demucs 保存 wav 时报 TorchCodec 缺失
+
+如果 Demucs 已经跑到 100%，但最后报：
+
+```text
+ModuleNotFoundError: No module named 'torchcodec'
+ImportError: TorchCodec is required for save_with_torchcodec
+```
+
+说明分离计算已经完成，失败点在 `torchaudio.save()` 写出 wav 文件。新版 TorchAudio 将音频保存转向 TorchCodec，需要给 `rvc` 环境补装一次：
+
+```bash
+source /root/miniconda3/etc/profile.d/conda.sh
+conda activate rvc
+python -m pip install --no-cache-dir "torchcodec==0.11.*" --index-url https://download.pytorch.org/whl/cpu
+python - <<'PY'
+from torchcodec.encoders import AudioEncoder
+print("torchcodec ok")
+PY
+```
+
+安装成功后重新执行 `separate_vocals_demucs.sh` 即可。
+
+如果 `torchcodec` 已显示 installed，但验证时报：
+
+```text
+Could not load libtorchcodec
+GLIBCXX_3.4.31 not found
+```
+
+说明 `torchcodec` 找到了 FFmpeg，但加载时撞上了系统较旧的 `libstdc++.so.6`。先让当前 shell 优先使用 conda 环境里的运行库：
+
+```bash
+source /root/miniconda3/etc/profile.d/conda.sh
+conda activate rvc
+export LD_LIBRARY_PATH="$CONDA_PREFIX/lib:${LD_LIBRARY_PATH:-}"
+python - <<'PY'
+from torchcodec.encoders import AudioEncoder
+print("torchcodec ok")
+PY
+```
+
+如果仍然失败，再补装较新的 conda C++ 运行库：
+
+```bash
+conda install -y -c conda-forge libstdcxx-ng
+export LD_LIBRARY_PATH="$CONDA_PREFIX/lib:${LD_LIBRARY_PATH:-}"
+python - <<'PY'
+from torchcodec.encoders import AudioEncoder
+print("torchcodec ok")
+PY
+```
+
+验证通过后，在同一个 shell 里重新执行 Demucs 分离命令。
+
+### RVC WebUI 启动时报 soundfile 缺失
+
+如果 `soundfile` 在 `rvc` 环境里已经安装，但启动 WebUI 仍报：
+
+```text
+ModuleNotFoundError: No module named 'soundfile'
+```
+
+通常是启动脚本里的 `python` 走到了 base conda 环境，而不是 `rvc` 环境。新版 `start_rvc_webui.sh` 已经改为使用绝对路径：
+
+```text
+/root/miniconda3/envs/rvc/bin/python
+```
+
+临时手动启动也可以这样做：
+
+```bash
+cd /root/autodl-tmp/vip_singing/audio_workflow/tools/Retrieval-based-Voice-Conversion-WebUI
+export LD_LIBRARY_PATH="/root/miniconda3/envs/rvc/lib:${LD_LIBRARY_PATH:-}"
+nohup /root/miniconda3/envs/rvc/bin/python infer-web.py \
+  --port 6008 \
+  --pycmd /root/miniconda3/envs/rvc/bin/python \
+  --noautoopen \
+  > /root/autodl-tmp/vip_singing/audio_workflow/logs/rvc_webui_6008.log 2>&1 &
+```
+
+### RVC Convert 时报 HuBERT weights_only 加载失败
+
+如果 WebUI 只显示 `Error`，日志中出现：
+
+```text
+_pickle.UnpicklingError: Weights only load failed
+Unsupported global: GLOBAL fairseq.data.dictionary.Dictionary
+```
+
+这是 PyTorch 2.6+ 将 `torch.load()` 的默认 `weights_only` 改为 `True` 后，与旧版 fairseq/RVC 加载 `hubert_base.pt` 的方式不兼容。确认 `hubert_base.pt` 来源可信后，可在 `rvc` 环境里的 fairseq 做兼容补丁：
+
+```bash
+source /root/miniconda3/etc/profile.d/conda.sh
+conda activate rvc
+python - <<'PY'
+from pathlib import Path
+
+p = Path("/root/miniconda3/envs/rvc/lib/python3.10/site-packages/fairseq/checkpoint_utils.py")
+backup = p.with_suffix(".py.rvc_bak")
+if not backup.exists():
+    backup.write_text(p.read_text())
+
+text = p.read_text()
+old = 'state = torch.load(f, map_location=torch.device("cpu"))'
+new = 'state = torch.load(f, map_location=torch.device("cpu"), weights_only=False)'
+if old in text:
+    p.write_text(text.replace(old, new, 1))
+elif new not in text:
+    raise SystemExit("expected torch.load line not found")
+print("fairseq checkpoint loader patched")
+PY
+```
+
+补丁后需要重启 RVC WebUI-6008，再刷新浏览器页面。
 
 ## 合规提醒
 
