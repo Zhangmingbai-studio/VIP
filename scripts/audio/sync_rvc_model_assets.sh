@@ -35,13 +35,17 @@ if [[ -n "$VOICE_DIR" ]]; then
   sync_one_dir "$VOICE_DIR"
 else
   found=0
+  if find "$MODEL_ROOT" -maxdepth 1 -type f \( -name '*.pth' -o -name '*.index' \) | grep -q .; then
+    found=1
+    sync_one_dir "$MODEL_ROOT"
+  fi
   for dir in "$MODEL_ROOT"/*; do
     [[ -d "$dir" ]] || continue
     found=1
     sync_one_dir "$dir"
   done
   if [[ "$found" -eq 0 ]]; then
-    echo "Put each RVC voice model under: $MODEL_ROOT/<voice_name>/"
+    echo "Put RVC voice models either directly under $MODEL_ROOT/ or under $MODEL_ROOT/<voice_name>/"
   fi
 fi
 

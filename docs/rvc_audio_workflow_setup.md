@@ -71,6 +71,12 @@ gradio_client：0.2.9
 /root/autodl-tmp/vip_singing/audio_workflow/input/rvc_models/<voice_name>/<voice_name>.index
 ```
 
+如果只是临时测试，也可以直接把 `.pth` 和 `.index` 放到：
+
+```text
+/root/autodl-tmp/vip_singing/audio_workflow/input/rvc_models/
+```
+
 上传 RVC 音色模型后，执行：
 
 ```bash

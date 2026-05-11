@@ -16,8 +16,8 @@
 
 ```text
 阶段：RVC 音频工作流
-状态：AutoDL 已创建 rvc 环境，RVC WebUI 6008 临时启动验证通过，等待上传 Hubert/RMVPE/音色模型
-日期：2026-05-09
+状态：Hubert/RMVPE 和 misono-mika RVC 音色模型已接入，RVC WebUI-6008 已启动
+日期：2026-05-11
 ```
 
 ## 进度总览
@@ -45,7 +45,8 @@
 | RVC 音频脚本 | 已完成 | 已生成 `scripts/audio/*.sh` |
 | RVC 音频工作流文档 | 已完成 | 已生成 `docs/rvc_audio_workflow_setup.md` |
 | RVC WebUI 启动验证 | 已完成 | 临时启动 6008 并确认 HTTP 200，测试后已停止 |
-| RVC 基础模型上传 | 待用户上传 | 需要 `hubert_base.pt`、`rmvpe.pt`、RVC `.pth/.index` |
+| RVC 基础模型上传 | 已完成 | `hubert_base.pt`、`rmvpe.pt` 已放入 RVC assets |
+| RVC 音色模型同步 | 已完成 | `misono-mika.pth/.index` 已软链接到 RVC assets |
 | 首个歌曲片段转换 | 待开始 | 上传音频和音色模型后执行 |
 
 ## 本次开发记录
@@ -190,6 +191,45 @@ DEVELOPMENT_PROGRESS.md
 5. 启动 WebUI-6008，跑通首个 10-15 秒音频片段
 ```
 
+### 2026-05-11
+
+目标：
+
+```text
+接入用户已上传的 RVC 基础模型和音色模型，启动 RVC WebUI。
+```
+
+完成：
+
+```text
+[x] 确认 `hubert_base.pt` 已存在于 `assets/hubert/`
+[x] 确认 `rmvpe.pt` 已存在于 `assets/rmvpe/`
+[x] 确认用户已上传 `misono-mika.pth` 和 `misono-mika.index`
+[x] 修正 `sync_rvc_model_assets.sh`，同时支持模型直接放在 `input/rvc_models/` 根目录和子目录
+[x] 将 `misono-mika.pth` 软链接到 `assets/weights/`
+[x] 将 `misono-mika.index` 软链接到 `assets/indices/`
+[x] 运行 RVC smoke check：Hubert present，RMVPE present，voice pth count 1，voice index count 1
+[x] 重启 RVC WebUI-6008，确认 HTTP ready
+```
+
+当前 RVC WebUI：
+
+```text
+端口：6008
+进程：python infer-web.py --port 6008 --pycmd python --noautoopen
+音色模型：misono-mika
+```
+
+下一步：
+
+```text
+1. 打开 AutoDL WebUI-6008
+2. 上传或选择 10-15 秒歌曲片段
+3. 先用 Demucs 分离 vocals/no_vocals
+4. 在 RVC WebUI 中用 misono-mika 转换 vocals.wav
+5. 将转换后人声与 no_vocals.wav 混音
+```
+
 ## 决策记录
 
 | 日期 | 决策 | 原因 |
@@ -208,6 +248,7 @@ DEVELOPMENT_PROGRESS.md
 | 2026-05-09 | RVC WebUI 预留使用 6008 | AutoDL 页面已有 WebUI-6008 入口，不改现有 6006 ComfyUI |
 | 2026-05-09 | 音频分离优先使用 Demucs | 比先折腾 UVR5 更适合作为 MVP 人声/伴奏分离起点 |
 | 2026-05-09 | 暂不训练自有 RVC 音色 | 先用现成模型跑通歌曲片段闭环，再替换成自训练音色 |
+| 2026-05-11 | RVC 音色模型同步脚本同时支持根目录和子目录 | 用户实际将 `.pth/.index` 直接放在 `input/rvc_models/` 根目录，脚本需兼容这种轻量测试方式 |
 
 ## 待确认事项
 
@@ -221,8 +262,9 @@ DEVELOPMENT_PROGRESS.md
 [x] 第一轮虚拟 IP 角色设定
 [x] 第一轮角色候选图已得到满意候选
 [x] 第一张 9:16 唱歌视频首帧已有初版基准
-[ ] 上传 RVC `hubert_base.pt`
-[ ] 上传 RVC `rmvpe.pt`
-[ ] 上传一个 RVC 音色模型 `.pth/.index`
+[x] 上传 RVC `hubert_base.pt`
+[x] 上传 RVC `rmvpe.pt`
+[x] 上传一个 RVC 音色模型 `.pth/.index`
+[x] RVC WebUI-6008 启动并可访问
 [ ] 跑通第一段 10-15 秒 RVC 音频转换
 ```
