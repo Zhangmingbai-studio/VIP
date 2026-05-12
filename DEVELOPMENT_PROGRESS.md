@@ -15,9 +15,9 @@
 ## 当前阶段
 
 ```text
-阶段：RVC 音频工作流
-状态：Hubert/RMVPE 和 misono-mika RVC 音色模型已接入，RVC WebUI-6008 已启动
-日期：2026-05-11
+阶段：LTX-2.3 视频工作流
+状态：视频工作流 custom nodes 已安装，ComfyUI 已更新，LTX-2.3 IA2V 工作流已准备，模型已下载并通过环境检查，下一步跑 5 秒 smoke
+日期：2026-05-12
 ```
 
 ## 进度总览
@@ -50,6 +50,12 @@
 | 首个歌曲片段分离 | 已完成 | Demucs 已输出 `vocals.wav` 和 `no_vocals.wav` |
 | 首个歌曲片段 RVC 转换 | 已完成 | 已从 Gradio 临时输出归档 RVC 人声 |
 | 第一版音频混音 | 已完成 | 已输出 16 秒 `final_mix.wav` |
+| LTX-2.3 custom nodes | 已完成 | 已安装 ComfyUI-LTXVideo / VideoHelperSuite / ComfyMath |
+| ComfyUI 更新 | 已完成 | 已更新到支持 LTX-2.3 AV 节点的版本 |
+| LTX-2.3 视频工作流 | 已完成骨架 | 已生成 5 秒 smoke 和 16 秒 full 两个工作流 |
+| LTX-2.3 模型下载 | 已完成 | checkpoint、Gemma text encoder、LoRA、latent upscaler 均已就位 |
+| 第一段唱歌视频生成 | 待开始 | 先跑 5 秒 smoke，再跑 16 秒 full |
+| 工作流使用手册 | 已完成初版 | 已生成 `docs/vip_singing_workflow_usage_guide.md`，视频章节待 smoke 跑通后补全 |
 
 ## 本次开发记录
 
@@ -249,6 +255,68 @@ DEVELOPMENT_PROGRESS.md
 8. 如果音频可接受，进入 LTX-2.3 视频工作流
 ```
 
+### 2026-05-12
+
+目标：
+
+```text
+搭建第三条 LTX-2.3 + lip-sync 视频工作流，使用首帧图和 RVC 人声生成唱歌视频。
+```
+
+完成：
+
+```text
+[x] 确认 ComfyUI 6006 仍按 AutoDL 原入口运行
+[x] 确认首帧图、RVC dry vocal、final_mix 三个素材已在服务器
+[x] 下载官方 LTX-2.3 Image Audio to Video 工作流模板
+[x] 安装 ComfyUI-LTXVideo、ComfyUI-VideoHelperSuite、ComfyMath
+[x] 更新 ComfyUI 到支持 LTX-2.3 AV 节点的版本
+[x] 重启 ComfyUI，仍使用 127.0.0.1:6006
+[x] 确认 LTX-2.3 IA2V 所需核心节点已加载
+[x] 生成 Luna 专用 5 秒 smoke 工作流
+[x] 生成 Luna 专用 16 秒 full 工作流
+[x] 创建 LTX-2.3 模型下载脚本
+[x] 创建视频输入素材软链接脚本
+[x] 创建最终混音替换视频音频脚本
+[x] 创建 LTX-2.3 视频环境检查脚本
+[x] 创建三层工作流统一使用手册初版
+[x] 展平 LTX-2.3 视频工作流，修复 Group Node 执行时报 `#340:287 has no class_type`
+```
+
+生成和更新文件：
+
+```text
+docs/ltx23_video_workflow_setup.md
+docs/vip_singing_workflow_usage_guide.md
+scripts/video/prepare_ltx23_video_inputs.sh
+scripts/video/download_ltx23_models.sh
+scripts/video/mux_final_audio.sh
+scripts/video/check_ltx23_video_setup.sh
+workflows/video/ltx_2_3_image_audio_to_video_official.json
+workflows/video/ltx_2_3_ia2v_luna_smoke_5s_workflow.json
+workflows/video/ltx_2_3_ia2v_luna_full_16s_workflow.json
+DEVELOPMENT_PROGRESS.md
+```
+
+远端关键文件：
+
+```text
+/root/autodl-tmp/vip_singing/video_workflow/scripts/
+/root/autodl-tmp/vip_singing/video_workflow/workflows/
+/root/ComfyUI/user/default/workflows/VIP/Video/LTX_2_3_IA2V_Luna_Smoke_5s.json
+/root/ComfyUI/user/default/workflows/VIP/Video/LTX_2_3_IA2V_Luna_Full_16s.json
+```
+
+下一步：
+
+```text
+1. 重启或刷新 ComfyUI，让模型下拉框识别新增模型
+2. 打开 `VIP/Video/LTX_2_3_IA2V_Luna_Smoke_5s.json`
+3. 先跑 5 秒 smoke
+4. 再跑 16 秒 full
+5. 用 final_mix 替换 LTX 输出视频中的驱动人声音频
+```
+
 ## 决策记录
 
 | 日期 | 决策 | 原因 |
@@ -268,6 +336,10 @@ DEVELOPMENT_PROGRESS.md
 | 2026-05-09 | 音频分离优先使用 Demucs | 比先折腾 UVR5 更适合作为 MVP 人声/伴奏分离起点 |
 | 2026-05-09 | 暂不训练自有 RVC 音色 | 先用现成模型跑通歌曲片段闭环，再替换成自训练音色 |
 | 2026-05-11 | RVC 音色模型同步脚本同时支持根目录和子目录 | 用户实际将 `.pth/.index` 直接放在 `input/rvc_models/` 根目录，脚本需兼容这种轻量测试方式 |
+| 2026-05-12 | lip-sync 驱动使用 RVC dry vocal，最终发布音频使用 final_mix | 干声驱动口型更稳，成片仍保留伴奏混音 |
+| 2026-05-12 | LTX-2.3 先跑 5 秒 smoke，再跑 16 秒 full | 降低首次视频生成的排错成本和显存/时间风险 |
+| 2026-05-12 | 为 LTX-2.3 更新 ComfyUI，但保留 6006 访问方式 | 原 ComfyUI 版本缺 LTX-AV 核心模块，更新是运行 IA2V 的必要条件 |
+| 2026-05-12 | 将 LTX-2.3 工作流从 Group Node 展平为普通节点 | 当前 ComfyUI 前端提交 Group Node 时会把内部节点作为缺少 `class_type` 的执行节点，导致 `#340:287` 报错 |
 
 ## 待确认事项
 
@@ -288,6 +360,11 @@ DEVELOPMENT_PROGRESS.md
 [x] 跑通第一段歌曲片段 Demucs 人声/伴奏分离
 [x] 跑通第一段 RVC 音色转换
 [x] 输出第一版 RVC dry vocal 和 `final_mix.wav`
-[ ] 试听第一版 RVC 音频，决定是否调参重跑
-[ ] 进入 LTX-2.3 + lip-sync 视频工作流
+[x] 试听第一版 RVC 音频，决定进入视频工作流
+[x] 进入 LTX-2.3 + lip-sync 视频工作流
+[x] 安装 LTX-2.3 视频 custom nodes
+[x] 更新 ComfyUI 以支持 LTX-2.3 AV 节点
+[x] 下载 LTX-2.3 模型文件
+[ ] 跑通 5 秒 LTX-2.3 IA2V smoke 视频
+[ ] 跑通 16 秒 LTX-2.3 IA2V 完整视频
 ```
