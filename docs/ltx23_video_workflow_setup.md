@@ -14,14 +14,18 @@ lip-sync / motion 驱动：RVC 转换后的人声干声
 ## 当前素材
 
 ```text
-首帧图：
+首帧图资产库：
+/root/autodl-tmp/vip_singing/assets/first_frames/
+
+示例：
 /root/autodl-tmp/vip_singing/assets/first_frames/luna_v1_first_frame.png
+/root/autodl-tmp/vip_singing/assets/first_frames/zeta_v1_first_frame.png
 
 LTX-2.3 驱动音频：
-/root/autodl-tmp/vip_singing/audio_workflow/output/rvc_vocals/045b_clip_27s_16s_misono_mika_rvc.wav
+/root/autodl-tmp/vip_singing/audio_workflow/output/rvc_vocals/
 
 最终混音音频：
-/root/autodl-tmp/vip_singing/audio_workflow/output/final_mix/045b_clip_27s_16s_misono_mika_final_mix.wav
+/root/autodl-tmp/vip_singing/audio_workflow/output/final_mix/
 ```
 
 ComfyUI `LoadImage/LoadAudio` 使用的是 `ComfyUI/input` 目录，已准备脚本：
@@ -33,10 +37,12 @@ bash /root/autodl-tmp/vip_singing/video_workflow/scripts/prepare_ltx23_video_inp
 它会创建：
 
 ```text
-/root/ComfyUI/input/VIP/video/luna_v1_first_frame.png
-/root/ComfyUI/input/VIP/video/045b_clip_27s_16s_misono_mika_rvc.wav
-/root/ComfyUI/input/VIP/video/045b_clip_27s_16s_misono_mika_final_mix.wav
+/root/ComfyUI/input/VIP/video/first_frames/<ip_name>_v1_first_frame.png
+/root/ComfyUI/input/VIP/video/audio/rvc_vocals/<name>_rvc.wav
+/root/ComfyUI/input/VIP/video/audio/final_mix/<name>_final_mix.wav
 ```
+
+ComfyUI 的 `Load Image` / `Load Audio` 节点只能从 `/root/ComfyUI/input` 下拉选择文件，所以长期资产仍放在 `/root/autodl-tmp/vip_singing/assets` 和 `audio_workflow/output`，再由脚本同步为软链接。
 
 ## 已安装内容
 
@@ -82,11 +88,18 @@ bash /root/autodl-tmp/vip_singing/video_workflow/scripts/download_ltx23_models.s
 已准备两个 UI 工作流：
 
 ```text
+/root/ComfyUI/user/default/workflows/VIP/Video/LTX_2_3_IA2V_Smoke_5s.json
+/root/ComfyUI/user/default/workflows/VIP/Video/LTX_2_3_IA2V_Full_16s.json
+```
+
+保留兼容旧入口：
+
+```text
 /root/ComfyUI/user/default/workflows/VIP/Video/LTX_2_3_IA2V_Luna_Smoke_5s.json
 /root/ComfyUI/user/default/workflows/VIP/Video/LTX_2_3_IA2V_Luna_Full_16s.json
 ```
 
-这两个工作流已经从官方模板的 Group Node 形式展平为普通节点。若运行时出现过 `Node ID '#340:287' has no class_type`，说明画布里仍是旧版本，需要刷新工作流列表并重新打开上述工作流。
+这些工作流已经从官方模板的 Group Node 形式展平为普通节点。若运行时出现过 `Node ID '#340:287' has no class_type`，说明画布里仍是旧版本，需要刷新工作流列表并重新打开上述工作流。
 
 建议先跑 `Smoke_5s`，确认嘴型、脸部稳定性和人物一致性，再跑 `Full_16s`。
 
@@ -96,24 +109,26 @@ bash /root/autodl-tmp/vip_singing/video_workflow/scripts/download_ltx23_models.s
 2. 左侧工作流面板刷新，打开：
 
 ```text
-VIP/Video/LTX_2_3_IA2V_Luna_Smoke_5s.json
+VIP/Video/LTX_2_3_IA2V_Smoke_5s.json
 ```
 
 3. 检查输入：
 
 ```text
-image：VIP/video/luna_v1_first_frame.png
-audio：VIP/video/045b_clip_27s_16s_misono_mika_rvc.wav
+image：VIP/video/first_frames/<ip_name>_v1_first_frame.png
+audio：VIP/video/audio/rvc_vocals/<name>_rvc.wav
 ```
 
-4. 先运行 5 秒 smoke。
-5. 如果结果可用，再打开 16 秒版本。
-6. 输出视频生成后，用最终混音替换视频音频：
+4. 根据所选 IP 修改 Prompt 节点里的角色描述和动作描述。
+5. 先运行 5 秒 smoke。
+6. 如果结果可用，再打开 16 秒版本。
+7. 输出视频生成后，用最终混音替换视频音频：
 
 ```bash
 bash /root/autodl-tmp/vip_singing/video_workflow/scripts/mux_final_audio.sh \
   /root/ComfyUI/output/VIP/LTX23/你的_ltx_输出.mp4 \
-  /root/autodl-tmp/vip_singing/video_workflow/output/luna_ltx23_final_mix.mp4
+  /root/autodl-tmp/vip_singing/video_workflow/output/<ip_name>_<song_clip>_final_mix.mp4 \
+  /root/autodl-tmp/vip_singing/audio_workflow/output/final_mix/<name>_final_mix.wav
 ```
 
 ## 验证

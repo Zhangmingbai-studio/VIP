@@ -144,17 +144,31 @@ ComfyUI 输出目录通常为：
 
 ### 固化首帧
 
-选定最终图后，将它保存或复制为：
+选定最终图后，建议保留 ComfyUI 原始输出文件，同时复制一份到资产库：
 
 ```text
-/root/autodl-tmp/vip_singing/assets/ip_refs/ref_front.png
-/root/autodl-tmp/vip_singing/assets/first_frames/luna_v1_first_frame.png
+/root/autodl-tmp/vip_singing/assets/ip_refs/<ip_name>_v1_ref_front.png
+/root/autodl-tmp/vip_singing/assets/first_frames/<ip_name>_v1_first_frame.png
 ```
 
-视频层默认会使用：
+例如：
 
 ```text
 /root/autodl-tmp/vip_singing/assets/first_frames/luna_v1_first_frame.png
+/root/autodl-tmp/vip_singing/assets/first_frames/zeta_v1_first_frame.png
+/root/autodl-tmp/vip_singing/assets/first_frames/alpha_v1_first_frame.png
+```
+
+视频层不会直接扫描 `assets/first_frames`，而是通过同步脚本把这些图片链接到 ComfyUI 的 input 目录。执行：
+
+```bash
+bash /root/autodl-tmp/vip_singing/video_workflow/scripts/prepare_ltx23_video_inputs.sh
+```
+
+之后在视频工作流的 `Load Image` 节点中，从下拉列表选择：
+
+```text
+VIP/video/first_frames/<ip_name>_v1_first_frame.png
 ```
 
 ## 工作流二：RVC 音频层
@@ -343,8 +357,8 @@ AutoDL WebUI-6006
 ComfyUI-LTXVideo
 ComfyUI-VideoHelperSuite
 ComfyMath
-VIP/Video/LTX_2_3_IA2V_Luna_Smoke_5s.json
-VIP/Video/LTX_2_3_IA2V_Luna_Full_16s.json
+VIP/Video/LTX_2_3_IA2V_Smoke_5s.json
+VIP/Video/LTX_2_3_IA2V_Full_16s.json
 ```
 
 输入素材链接脚本：
@@ -370,15 +384,33 @@ bash /root/autodl-tmp/vip_singing/video_workflow/scripts/download_ltx23_models.s
 模型确认完成后，先打开：
 
 ```text
-VIP/Video/LTX_2_3_IA2V_Luna_Smoke_5s.json
+VIP/Video/LTX_2_3_IA2V_Smoke_5s.json
 ```
 
 如果旧画布运行时报 `Node ID '#340:287' has no class_type`，刷新左侧工作流列表后重新打开该工作流。当前远端版本已经展平 Group Node。
 
+在 `Load Image` 节点中选择首帧：
+
+```text
+VIP/video/first_frames/<ip_name>_v1_first_frame.png
+```
+
+在 `Load Audio` 节点中选择 RVC dry vocal：
+
+```text
+VIP/video/audio/rvc_vocals/<name>_rvc.wav
+```
+
+每次新增或替换首帧图、RVC 人声、final mix 后，先执行：
+
+```bash
+bash /root/autodl-tmp/vip_singing/video_workflow/scripts/prepare_ltx23_video_inputs.sh
+```
+
 确认 5 秒视频没有明显崩脸、口型可接受，再运行：
 
 ```text
-VIP/Video/LTX_2_3_IA2V_Luna_Full_16s.json
+VIP/Video/LTX_2_3_IA2V_Full_16s.json
 ```
 
 最后将视频音频替换为 final mix：
@@ -386,14 +418,15 @@ VIP/Video/LTX_2_3_IA2V_Luna_Full_16s.json
 ```bash
 bash /root/autodl-tmp/vip_singing/video_workflow/scripts/mux_final_audio.sh \
   /root/ComfyUI/output/VIP/LTX23/你的_ltx_输出.mp4 \
-  /root/autodl-tmp/vip_singing/video_workflow/output/luna_ltx23_final_mix.mp4
+  /root/autodl-tmp/vip_singing/video_workflow/output/<ip_name>_<song_clip>_final_mix.mp4 \
+  /root/autodl-tmp/vip_singing/audio_workflow/output/final_mix/<name>_final_mix.wav
 ```
 
 ## 一次完整生产的文件链
 
 ```text
 IP 首帧：
-/root/autodl-tmp/vip_singing/assets/first_frames/luna_v1_first_frame.png
+/root/autodl-tmp/vip_singing/assets/first_frames/<ip_name>_v1_first_frame.png
 
 歌曲片段：
 /root/autodl-tmp/vip_singing/audio_workflow/input/song_clips/<clip>.wav

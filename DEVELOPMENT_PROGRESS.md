@@ -293,6 +293,8 @@ scripts/video/download_ltx23_models.sh
 scripts/video/mux_final_audio.sh
 scripts/video/check_ltx23_video_setup.sh
 workflows/video/ltx_2_3_image_audio_to_video_official.json
+workflows/video/ltx_2_3_ia2v_smoke_5s_workflow.json
+workflows/video/ltx_2_3_ia2v_full_16s_workflow.json
 workflows/video/ltx_2_3_ia2v_luna_smoke_5s_workflow.json
 workflows/video/ltx_2_3_ia2v_luna_full_16s_workflow.json
 DEVELOPMENT_PROGRESS.md
@@ -303,18 +305,20 @@ DEVELOPMENT_PROGRESS.md
 ```text
 /root/autodl-tmp/vip_singing/video_workflow/scripts/
 /root/autodl-tmp/vip_singing/video_workflow/workflows/
-/root/ComfyUI/user/default/workflows/VIP/Video/LTX_2_3_IA2V_Luna_Smoke_5s.json
-/root/ComfyUI/user/default/workflows/VIP/Video/LTX_2_3_IA2V_Luna_Full_16s.json
+/root/ComfyUI/user/default/workflows/VIP/Video/LTX_2_3_IA2V_Smoke_5s.json
+/root/ComfyUI/user/default/workflows/VIP/Video/LTX_2_3_IA2V_Full_16s.json
 ```
 
 下一步：
 
 ```text
-1. 重启或刷新 ComfyUI，让模型下拉框识别新增模型
-2. 打开 `VIP/Video/LTX_2_3_IA2V_Luna_Smoke_5s.json`
-3. 先跑 5 秒 smoke
-4. 再跑 16 秒 full
-5. 用 final_mix 替换 LTX 输出视频中的驱动人声音频
+1. 将选中的首帧图放入 `/root/autodl-tmp/vip_singing/assets/first_frames/`
+2. 执行 `prepare_ltx23_video_inputs.sh`，同步首帧图和音频到 ComfyUI input 目录
+3. 打开 `VIP/Video/LTX_2_3_IA2V_Smoke_5s.json`
+4. 在 `Load Image` 和 `Load Audio` 节点中选择本次 IP 首帧和 RVC dry vocal
+5. 先跑 5 秒 smoke
+6. 再跑 16 秒 full
+7. 用 final_mix 替换 LTX 输出视频中的驱动人声音频
 ```
 
 ## 决策记录
@@ -340,6 +344,7 @@ DEVELOPMENT_PROGRESS.md
 | 2026-05-12 | LTX-2.3 先跑 5 秒 smoke，再跑 16 秒 full | 降低首次视频生成的排错成本和显存/时间风险 |
 | 2026-05-12 | 为 LTX-2.3 更新 ComfyUI，但保留 6006 访问方式 | 原 ComfyUI 版本缺 LTX-AV 核心模块，更新是运行 IA2V 的必要条件 |
 | 2026-05-12 | 将 LTX-2.3 工作流从 Group Node 展平为普通节点 | 当前 ComfyUI 前端提交 Group Node 时会把内部节点作为缺少 `class_type` 的执行节点，导致 `#340:287` 报错 |
+| 2026-05-13 | 视频工作流改为通用输入目录 | 支持 Luna、Zeta、Alpha 等多 IP 首帧在 `Load Image` 下拉选择，不再绑定固定 `luna_v1_first_frame.png` |
 
 ## 待确认事项
 

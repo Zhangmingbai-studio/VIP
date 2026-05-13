@@ -46,4 +46,4 @@ for file in \
 done
 
 echo "--- ComfyUI input assets ---"
-find "$COMFY_ROOT/input/VIP/video" -maxdepth 1 \( -type l -o -type f \) -printf '%p -> %l\n' 2>/dev/null | sort || true
+find "$COMFY_ROOT/input/VIP/video" -maxdepth 3 \( -type l -o -type f \) -printf '%p -> %l\n' 2>/dev/null | sort || true
