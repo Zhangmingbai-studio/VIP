@@ -111,6 +111,63 @@ nohup bash /root/autodl-tmp/vip_singing/audio_workflow/scripts/start_rvc_webui.s
 bash /root/autodl-tmp/vip_singing/audio_workflow/scripts/start_rvc_webui.sh 6008
 ```
 
+## 已训练的专属 RVC 模型
+
+第一版专属音色模型：
+
+```text
+模型名：qtfy_v1_40min
+训练素材：约 41 分钟干净人声
+训练集本地目录：
+/Users/zhangmingbai/Workspace/Storage/train-RVC/dataset/qtfy_v1_40min
+训练集远端目录：
+/root/autodl-tmp/vip_singing/audio_workflow/input/rvc_train_datasets/qtfy_v1_40min
+```
+
+训练配置：
+
+```text
+RVC version：v2
+sample rate：40k
+f0：开启
+f0 method：rmvpe
+batch size：12
+epoch：100
+pretrained G：assets/pretrained_v2/f0G40k.pth
+pretrained D：assets/pretrained_v2/f0D40k.pth
+```
+
+最终产物：
+
+```text
+/root/autodl-tmp/vip_singing/audio_workflow/tools/Retrieval-based-Voice-Conversion-WebUI/assets/weights/qtfy_v1_40min.pth
+/root/autodl-tmp/vip_singing/audio_workflow/tools/Retrieval-based-Voice-Conversion-WebUI/assets/indices/qtfy_v1_40min_IVF2618_Flat_nprobe_1_qtfy_v1_40min_v2.index
+```
+
+训练中间产物和日志：
+
+```text
+/root/autodl-tmp/vip_singing/audio_workflow/tools/Retrieval-based-Voice-Conversion-WebUI/logs/qtfy_v1_40min/
+/root/autodl-tmp/vip_singing/audio_workflow/logs/qtfy_v1_40min_train_pipeline.log
+```
+
+使用方式：
+
+```text
+1. 打开 AutoDL WebUI-6008
+2. 在 Model Inference 页点击 Refresh voice list and index path
+3. Inference voice 选择 qtfy_v1_40min.pth
+4. index 选择 qtfy_v1_40min_IVF2618_Flat_nprobe_1_qtfy_v1_40min_v2.index
+5. f0 method 继续优先使用 rmvpe
+```
+
+本次训练环境额外修复：
+
+```text
+1. AutoDL 无法直接访问 Hugging Face 时，已改为本地下载 pretrained_v2/f0G40k.pth 和 f0D40k.pth 后上传到远端。
+2. 当前 Matplotlib 版本移除了 FigureCanvasAgg.tostring_rgb()，已在远端 RVC 的 infer/lib/train/utils.py 中兼容 buffer_rgba()。
+```
+
 ## MVP 使用流程
 
 1. 将下载好的完整歌曲裁成 10-15 秒 WAV 片段：
@@ -129,6 +186,56 @@ python3 scripts/audio/prepare_song_clip.py "/path/to/full_song.mp3" \
 --duration MVP 推荐 10-15 秒，默认 12 秒
 --out 可以是完整 wav 路径，也可以是目录；例如 `--out .` 表示输出到当前目录
 输出格式为 44.1kHz / pcm_s16le / wav
+```
+
+如果源素材是本地视频，例如抖音/剪映导出的 `.mp4`，可以先在本地直接提取音频片段：
+
+```bash
+python3 scripts/audio/prepare_video_audio_clip.py "/path/to/video.mp4" \
+  --start 00:08 \
+  --duration 12 \
+  --name demo_video
+```
+
+如果视频本身就是一条短素材，想完整提取整段视频里的音频：
+
+```bash
+python3 scripts/audio/prepare_video_audio_clip.py "/path/to/video.mp4" \
+  --full \
+  --name demo_video
+```
+
+默认输出到：
+
+```text
+local_assets/audio/video_clips/
+```
+
+脚本结束时会打印两条下一步命令：
+
+```text
+1. scp 上传命令：把本地 wav 上传到 AutoDL 的 input/song_clips/
+2. 服务器 Demucs 命令：对上传后的 wav 分离 vocals.wav 和 no_vocals.wav
+```
+
+如果想让脚本创建 wav 后立刻尝试上传，可以加 `--upload`：
+
+```bash
+python3 scripts/audio/prepare_video_audio_clip.py "/path/to/video.mp4" \
+  --start 00:08 \
+  --duration 12 \
+  --name demo_video \
+  --upload
+```
+
+如果要沿用当前 16 秒视频工作流，可以加 `--allow-any-duration`：
+
+```bash
+python3 scripts/audio/prepare_video_audio_clip.py "/path/to/video.mp4" \
+  --start 00:08 \
+  --duration 16 \
+  --allow-any-duration \
+  --name demo_video_16s
 ```
 
 2. 上传 10-15 秒原始歌曲片段到：

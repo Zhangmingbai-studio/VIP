@@ -15,9 +15,9 @@
 ## 当前阶段
 
 ```text
-阶段：LTX-2.3 视频工作流
-状态：视频工作流 custom nodes 已安装，ComfyUI 已更新，LTX-2.3 IA2V 工作流已准备，模型已下载并通过环境检查，下一步跑 5 秒 smoke
-日期：2026-05-12
+阶段：RVC 专属音色训练
+状态：第一版 qtfy_v1_40min 已完成 100 epochs 训练并生成模型/index；RVC WebUI-6008 已启动，下一步用该模型跑 16 秒转换试听，满意后继续 LTX-2.3 视频 smoke/full
+日期：2026-05-15
 ```
 
 ## 进度总览
@@ -50,6 +50,7 @@
 | 首个歌曲片段分离 | 已完成 | Demucs 已输出 `vocals.wav` 和 `no_vocals.wav` |
 | 首个歌曲片段 RVC 转换 | 已完成 | 已从 Gradio 临时输出归档 RVC 人声 |
 | 第一版音频混音 | 已完成 | 已输出 16 秒 `final_mix.wav` |
+| 第一版专属 RVC 模型 | 已完成 | `qtfy_v1_40min.pth` 和配套 index 已训练完成并放入 RVC assets |
 | LTX-2.3 custom nodes | 已完成 | 已安装 ComfyUI-LTXVideo / VideoHelperSuite / ComfyMath |
 | ComfyUI 更新 | 已完成 | 已更新到支持 LTX-2.3 AV 节点的版本 |
 | LTX-2.3 视频工作流 | 已完成骨架 | 已生成 5 秒 smoke 和 16 秒 full 两个工作流 |
@@ -321,6 +322,58 @@ DEVELOPMENT_PROGRESS.md
 7. 用 final_mix 替换 LTX 输出视频中的驱动人声音频
 ```
 
+### 2026-05-15
+
+目标：
+
+```text
+整理 30-50 分钟专属人声训练集，并完成第一版自有 RVC 音色模型训练。
+```
+
+完成：
+
+```text
+[x] 本地从视频素材分离并整理出约 41 分钟干净人声训练集
+[x] 将训练集上传到 AutoDL 的 RVC 训练数据目录
+[x] 本地下载 pretrained_v2/f0G40k.pth 和 f0D40k.pth，并上传到远端 RVC assets
+[x] 远端修复 Matplotlib FigureCanvasAgg.tostring_rgb() 兼容问题
+[x] 使用 RVC v2 / 40k / f0 / rmvpe / batch size 12 / 100 epochs 完成训练
+[x] 构建 qtfy_v1_40min 配套 FAISS index
+[x] 最终模型和 index 已放入 RVC WebUI assets
+[x] 重启 RVC WebUI-6008，并确认可用于加载新模型
+[x] 新增本地视频提取 RVC-ready WAV 的脚本 `scripts/audio/prepare_video_audio_clip.py`
+[x] 更新 RVC 音频工作流文档，补充视频提取音频和专属模型训练结果
+```
+
+生成和更新文件：
+
+```text
+docs/rvc_audio_workflow_setup.md
+scripts/audio/prepare_video_audio_clip.py
+DEVELOPMENT_PROGRESS.md
+```
+
+远端关键文件：
+
+```text
+/root/autodl-tmp/vip_singing/audio_workflow/input/rvc_train_datasets/qtfy_v1_40min
+/root/autodl-tmp/vip_singing/audio_workflow/tools/Retrieval-based-Voice-Conversion-WebUI/assets/weights/qtfy_v1_40min.pth
+/root/autodl-tmp/vip_singing/audio_workflow/tools/Retrieval-based-Voice-Conversion-WebUI/assets/indices/qtfy_v1_40min_IVF2618_Flat_nprobe_1_qtfy_v1_40min_v2.index
+/root/autodl-tmp/vip_singing/audio_workflow/tools/Retrieval-based-Voice-Conversion-WebUI/logs/qtfy_v1_40min/
+/root/autodl-tmp/vip_singing/audio_workflow/logs/qtfy_v1_40min_train_pipeline.log
+```
+
+下一步：
+
+```text
+1. 打开 AutoDL WebUI-6008
+2. 点击 Refresh voice list and index path
+3. 选择 `qtfy_v1_40min.pth` 和对应 `.index`
+4. 用同一段 16 秒 vocals.wav 做转换试听
+5. 与 no_vocals.wav 混音，对比 misono-mika 与 qtfy_v1_40min 的自然度
+6. 如果音色稳定，将 qtfy_v1_40min 作为后续 LTX-2.3 dry vocal 驱动音频
+```
+
 ## 决策记录
 
 | 日期 | 决策 | 原因 |
@@ -345,6 +398,7 @@ DEVELOPMENT_PROGRESS.md
 | 2026-05-12 | 为 LTX-2.3 更新 ComfyUI，但保留 6006 访问方式 | 原 ComfyUI 版本缺 LTX-AV 核心模块，更新是运行 IA2V 的必要条件 |
 | 2026-05-12 | 将 LTX-2.3 工作流从 Group Node 展平为普通节点 | 当前 ComfyUI 前端提交 Group Node 时会把内部节点作为缺少 `class_type` 的执行节点，导致 `#340:287` 报错 |
 | 2026-05-13 | 视频工作流改为通用输入目录 | 支持 Luna、Zeta、Alpha 等多 IP 首帧在 `Load Image` 下拉选择，不再绑定固定 `luna_v1_first_frame.png` |
+| 2026-05-15 | 第一版自训练 RVC 使用约 41 分钟干净人声、RVC v2 / 40k / rmvpe / 100 epochs | 先得到稳定可用的专属音色基线，再决定是否继续清洗素材或增加 epochs |
 
 ## 待确认事项
 
@@ -366,6 +420,9 @@ DEVELOPMENT_PROGRESS.md
 [x] 跑通第一段 RVC 音色转换
 [x] 输出第一版 RVC dry vocal 和 `final_mix.wav`
 [x] 试听第一版 RVC 音频，决定进入视频工作流
+[x] 整理 30-50 分钟 RVC 专属训练素材
+[x] 跑通第一版专属 RVC 模型训练
+[ ] 使用 `qtfy_v1_40min` 跑通第一段 16 秒 RVC 转换试听
 [x] 进入 LTX-2.3 + lip-sync 视频工作流
 [x] 安装 LTX-2.3 视频 custom nodes
 [x] 更新 ComfyUI 以支持 LTX-2.3 AV 节点
